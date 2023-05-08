@@ -222,16 +222,3 @@ cohkm<-function(data,groupcolumn="Cohort",krange=2:10,ksel=T,altfeatnames=NULL,f
     return(list(Kmeans=km,KChoice=cohnbc,ResidualData=cohresid,CenterPlot=centerplot,MeanPlot=meanfig,CenterEuDist=hm1))
   }
 }
-
-# #test stability of k-means
-# kari<-as.data.frame(matrix(0,50,9))
-# ns<-c(1,5,10,20,50,100,200,500,1000)
-# for(i in 1:length(ns)){
-#   for(j in 1:50){
-#     tkm<-kmeans(scale(cohresiddflist[[1]]),4,iter.max=ns[i],nstart=100)
-#     kari[j,i]<-adjustedRandIndex(tkm$cluster,combclustdflist[[1]]$DiseaseState)
-#   };rm(j,tkm)
-# };rm(i)
-# names(kari)<-ns
-# kari<-reshape2::melt(kari)
-# ggplot(kari,aes(x=variable,y=value))+geom_boxplot()
