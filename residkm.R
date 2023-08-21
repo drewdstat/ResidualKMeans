@@ -1,5 +1,5 @@
 residkm<-function(data,groupcolumn="Cohort",krange=2:10,ksel=T,altfeatnames=NULL,feattypes=NULL,impncp=5,
-                impgrouping=NULL,imptypes=NULL,nbcindex="tracew",method=c("kmeans","pam","spectral")){
+                impgrouping=NULL,imptypes=NULL,nbcindex="all"){
   library(ggplot2)
   getmode<-function(v){
     unique(v)[which.max(tabulate(match(v,unique(v))))]
@@ -47,18 +47,7 @@ residkm<-function(data,groupcolumn="Cohort",krange=2:10,ksel=T,altfeatnames=NULL
     cohnbc<-krange[1]
     bestnc<-krange[1]
   }
-  if(length(method)>1) method<-method[1]
-  if(method=="kmeans"){
-    km<-kmeans(scale(cohresid),bestnc,iter.max=100,nstart=1000)
-  } else if(method=="pam"){
-    km<-fpc::pamk(scale(cohresid),krange=bestnc,criterion="ch")
-    km$cluster<-km$pamobject$clustering
-    km$centers<-km$pamobject$medoids
-    rownames(km$centers)<-1:nrow(km$centers)
-  } else if(method=="specc"){
-    km<-fpc::speccCBI(scale(cohresid),bestnc)
-    km$cluster<-km$partition
-  }
+  km<-kmeans(scale(cohresid),bestnc,iter.max=100,nstart=1000)
   
   reorder_clusters<-function(x){
     fx<-as.factor(x)
@@ -195,15 +184,8 @@ residkm<-function(data,groupcolumn="Cohort",krange=2:10,ksel=T,altfeatnames=NULL
   names(meanfigdata)<-featnames
   meanfig<-summarybycluster(meanfigdata,km$cluster,
                             contvars,setdiff(featnames,contvars))
-  eudist<-function(x) {
-    out<-matrix(0,ncol(x),ncol(x))
-    for(i in 1:ncol(x)){
-      for(j in 1:ncol(x)){
-        out[i,j]<-sqrt(sum((x[,i]-x[,j])^2))
-      };rm(j)
-    };rm(i)
-    rownames(out)<-colnames(out)<-colnames(x)
-    return(out)
+  eudist<-function(x){
+    as.matrix(dist(t(x),diag=T,upper=T))
   }
   
   allcenters<-km$centers
