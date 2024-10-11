@@ -205,7 +205,7 @@ clusters$KChoice$Best.nc
 Day, D. B., LeWinn, K. Z., Karr, C. J., Loftus, C. T., Carroll, K. N., Bush,
 N. R., ... & Sathyanarayana, S. (2024). Subpopulations of children with
 multiple chronic health outcomes in relation to chemical exposures in the
-ECHO-PATHWAYS consortium. Environment international, 185, 108486.
+ECHO-PATHWAYS consortium. Environment International, 185, 108486.
 
 Hartigan, J. A. and Wong, M. A. (1979). Algorithm AS 136: A K-means
 clustering algorithm. Applied Statistics, 28, 100–108. doi:10.2307/2346830.

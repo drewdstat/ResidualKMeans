@@ -245,7 +245,7 @@ missindex=c(5:8, 13:15), misstype="MAR", missseed=10, comiss=F)$DataList
 Day, D. B., LeWinn, K. Z., Karr, C. J., Loftus, C. T., Carroll, K. N., Bush,
 N. R., ... & Sathyanarayana, S. (2024). Subpopulations of children with
 multiple chronic health outcomes in relation to chemical exposures in the
-ECHO-PATHWAYS consortium. Environment international, 185, 108486.
+ECHO-PATHWAYS consortium. Environment International, 185, 108486.
 
 Qiu, W., & Joe, H. (2006). Generation of random clusters with specified
 degree of separation. Journal of Classification, 23(2), 315-334.
