@@ -1,258 +1,300 @@
-residkm<-function(data,groupcolumn="Cohort",krange=2:10,ksel=T,altfeatnames=NULL,
-                  feattypes=NULL,impncp=5,impgrouping=NULL,imptypes=NULL,
-                  nbcindex="tracew",method=c("kmeans","pam","spectral"),
-                  nbcmethod="complete"){
-  library(ggplot2)
-  getmode<-function(v){
-    unique(v)[which.max(tabulate(match(v,unique(v))))]
-  }
-  coredat<-data[,-which(names(data)==groupcolumn)]
-  colclasses<-sapply(coredat,class)
+#' Residual k-means analysis
+#'
+#' \code{residkm} performs residual k-means clustering, which is a method
+#' developed to cluster mixed continuous and categorical data while controlling
+#' for and thereby removing the influence of clustering by group. It was
+#' designed for use in multi-cohort studies in which there will be clustering
+#' by study site and different methods used at each site and cohort. The goal
+#' of those studies is to treat the collection of different cohorts as if it
+#' were one large cohort, and so this nuisance clustering by site/cohort must
+#' be removed in some way. Residual k-means involves first regressing each
+#' individual continuous or categorical variable on a grouping variable
+#' (e.g., study site) and then performing k-means clustering on those residuals
+#' after they are centered and scaled (i.e., having the mean subtracted and then
+#' dividing by the standard deviation).
+#'
+#' If there are missing data present in the matrix of variables to be clustered,
+#' single-value, multifactor analysis (MFA)-based imputation is performed using
+#' the \code{\link[imputeMFA]{missMDA}} function from the missMDA package. For
+#' more information on this imputation approach, see this
+#' \href{https://francoishusson.wordpress.com/2017/08/05/can-we-believe-in-the-imputations/}
+#' {blog post from the package author}. The optimal number of clusters is either
+#' user-specified or chosen using the consensus of methods implemented by the
+#' \code{\link[NbClust]{NbClust}} function, with user-specified \code{method}
+#' and \code{index} arguments fed into that function.
+#'
+#' @param data A data frame containing the \code{groupcolumn} column and all
+#' variables/features to be clustered. This data frame should not include any
+#' variables not intended to be included in the clustering.
+#' @param groupcolumn A character value for the column name of the
+#' grouping variable that represents known clustering structure that should be
+#' removed from the clustering process. For example, this could be an identifier
+#' for study cohort in a multi-cohort clustering analysis in which we want the
+#' clustering to be independent of study cohort. This defaults to \code{"Cohort"}.
+#' @param krange Either a single integer value or a vector of integers
+#' representing the number of clusters (\code{k}) or a range of possible numbers
+#' of clusters. Whether or not selection is done for this integer value or
+#' vector is determined by the argument \code{ksel}. This defaults to \code{2:10}.
+#' @param ksel A logical (boolean) value indicating whether to perform selection
+#' for the number of clusters \code{k}. If \code{ksel} is \code{FALSE}, the
+#' first value of \code{krange} is used as the number of clusters. If \code{ksel}
+#' is \code{TRUE}, the consensus of algorithms used by the
+#' \code{\link[NbClust]{NbClust}} function will be chosen as the number of
+#' clusters. This defaults to \code{TRUE}.
+#' @param altfeatnames An optional character vector of alternative names for the
+#' features/variables included in the clustering. These names will replace the
+#' corresponding column names in the output tables and plots. This defaults to
+#' NULL.
+#' @param featgroups This is an optional character vector defining a grouping of
+#' features to be incorporated into the plots. This must be of the same length
+#' as the number of features. This will define facets that will group features
+#' together in the plots of cluster centers \code{CenterPlot} and in the summary
+#' plot of features by cluster \code{SummaryPlot}. For example, if one is
+#' clustering 4 self-reported features and 6 clinically measured features, one
+#' could set \code{featgroups <- rep(c("Self-Reported", "Clinical"), c(4, 6))}.
+#' This defaults to NULL, meaning that no grouping is applied in those plots.
+#' @param impncp This and the following "imp..." arguments relate to the
+#' MFA-based imputation procedure used if missing values are detected in the
+#' provided data frame. Specifically, the \code{\link[imputeMFA]{missMDA}}
+#' function is used for this imputation, and \code{impncp} refers to the number
+#' of factors (akin to principal components) to use as a lower dimensional
+#' representation of the data from which new values will be imputed. This
+#' is the same as \code{ncp} in the \code{\link[imputeMFA]{missMDA}} functions,
+#' and it defaults to 5.
+#' @param impgrouping An optional vector of integers describing how many
+#' variables are in each group if one wants to group variables for the MFA
+#' procedure. For example, if there are 5 features included in the data frame
+#' \code{data} and the middle 3 originate from a common source and are highly
+#' correlated, one could group those 3 features for the imputation method by
+#' setting \code{impgrouping} to \code{c(1, 3, 1)}. This is the same as the
+#' \code{\link[imputeMFA]{missMDA}} argument \code{group}, and it defaults to
+#' NULL, meaning that each variable is considered to be distinct and no features
+#' are grouped together.
+#' @param imptypes An optional vector to specify the variable types for each
+#' group of features for the \code{\link[imputeMFA]{missMDA}} imputation
+#' function. This must either be equal to the length of the number of clustering
+#' features or, if \code{impgrouping} is specified, equal to the length of that
+#' grouping vector. Available options are \code{"n"} for categorical variables,
+#' \code{"c"} for continuous or integer values that will then be centered by
+#' the function prior to MFA, or \code{"s"} for continuous or integer values
+#' that will then be centered and scaled by the function prior to MFA. This is
+#' identical to the \code{types} argument in
+#' \code{\link[imputeMFA]{missMDA}}, and it defaults to NULL, meaning that each
+#' continuous and integer variable will be set to type \code{"s"} and all
+#' categorical variables will be set to type \code{"n"}.
+#' @param method A character value showing which type of clustering method to
+#' apply to the residuals of each variable regressed on \code{groupcolumn}. This
+#' defaults to \code{"kmeans"}, which would implement the residual k-means
+#' method and performed best out of all tested options of clustering algorithms
+#' applied to the residuals in the Day et al. 2024 paper. However, alternative
+#' options are included as a point of reference and for testing the residual
+#' k-means algorithm in for one's self against alternative methods. The first
+#' alternative option is \code{"pam"} for partitioning around medoids (PAM),
+#' which is implemented using the \code{\link[fpc]{pamk}} function. The second
+#' is \code{"spectral"} for spectral clustering using the
+#' \code{\link[fpc]{speccCBI}} function. For both PAM and spectral clustering,
+#' the number of partitions is based on either the first value of \code{krange}
+#' if \code{ksel} is \code{FALSE} or the most frequently chosen value from the
+#' \code{\link[NbClust]{NbClust}} method, just as is the case with the default
+#' k-means method (i.e., \code{method = "kmeans"}). It is not recommended to use
+#' \code{"pam"} or \code{"spectral"} for \code{method} as they did not perform
+#' as well in simulations as the default \code{"kmeans"} method.
+#' @param nbcindex This character value argument is passed on to the
+#' \code{index} argument of the \code{\link[NbClust]{NbClust}} method. This
+#' chooses which algorithms to implement (see the \code{\link[NbClust]{NbClust}}
+#' documentation for more details). This defaults to \code{"all"}.
+#' @param nbcmethod This character value argument is passed on to the
+#' \code{method} argument of the \code{\link[NbClust]{NbClust}} method. Popular
+#' approaches include \code{"kmeans"} for k-means clustering and
+#' \code{"complete"} for hierarchical clustering, which is the default
+#' agglomeration method for \code{\link[base]{hclust}}. This defaults to
+#' \code{"complete"} as this has performed well in my experience. It may be
+#' counterintuitive that we would use a hierarchical clustering method for the
+#' \code{\link[NbClust]{NbClust}} method and not the method \code{"kmeans"},
+#' but that is because the implementation of k-means clustering in
+#' \code{\link[NbClust]{NbClust}} method is flawed, always setting the seed to 1,
+#' and only having one random initialization based on that same seed every time.
+#' This can lead to bad initializations that improperly cluster the data, as is
+#' clearly illustrated in this excellent
+#' \href{https://davetang.org/muse/2019/01/23/the-golden-rule-of-bioinformatics/}{
+#' 2019 blog post by Dave Tang}. I would recommend comparing results when the
+#' \code{nbcmethod} is set to \code{"complete"} and \code{"ward.D2"} to check
+#' for consistency of your optimal number of clusters, and I would recommend
+#' against using the \code{"kmeans"} \code{nbcmethod}.
+#'
+#' @return \code{residkm} returns a list of the following:
+#' \item{ResidualData}{The data frame of the residuals for each variable
+#' regressed on \code{groupcolumn}. Note that these residuals are not
+#' centered and scaled, though they were centered and scaled prior to
+#' clustering.}
+#' \item{Kmeans}{The output object of the k-means clustering of class
+#' \code{"kmeans"}.}
+#' \item{KChoice}{The output of the \code{\link[NbClust]{NbClust}} method.}
+#' \item{CenterPlot}{A plot of the cluster centers on the scale of the z-scores
+#' of the residuals.}
+#' \item{SummaryPlot}{A plot of the summary statistics of each feature by
+#' cluster.}
+#' \item{CenterEuDist}{This is a plot showing the Euclidean distances between
+#' each of the cluster centers.}
+#' \item{ImpData}{This is the version of the dataset \code{data} but with the
+#' singly imputed values included in cases where missing values are present in
+#' the data frame. This only appears in the output list if missing values were
+#' detected in the input data frame \code{data}.}
+#'
+#' @import ggplot2 NbClust missMDA fpc ggh4x gplots
+#' @export residkm
+#'
+#' @examples
+#' # Creating simulated data with GRCsim and analyze it with residkm
+#'
+#' #Single data frame of "Hub condition, medium separation" from Day et al. 2024
+#'
+#' hubhighsep <- GRCsim(nDisClust = 4, nCohortClust = 4, ncontvars = 8,
+#' ncatvars = 7, DisSepVal = 0.6, CohortSepVal = 0.2, catq = 0.8, nSignal = 15,
+#' nNoise = 0, nOutliers = 0, nrep = 1, DisClustSizes = c(600, 200, 100, 100),
+#' CohortClustSizes = c(400, 200, 300, 100), CDS = F,
+#' DisClustseed = 200, CohortClustseed = 300, CDSrho = 0.7)$DataList
+#'
+#' clusters <- residkm(hubhighsep[[1]][, c(paste0("x", 1:15), "Cohort")],
+#' groupcolumn = "Cohort", altfeatnames = paste0("Feature ", 1:15),
+#' featgroups = rep(c("Respiratory", "Behavior", "Disease\nHistory"), c(3, 5, 7)))
+#'
+#' # Center and Summary Plots juxtaposed
+#' cowplot::plot_grid(clusters$CenterPlot, clusters$SummaryPlot, nrow = 1)
+#'
+#' # Plotting Euclidean distance between cluster centers
+#' clusters$CenterEuDist()
+#'
+#' # Seeing which combinations of algorithms chose which number of clusters (k)
+#' clusters$KChoice$Best.nc
+#'
+#' @references
+#' Day, D. B., LeWinn, K. Z., Karr, C. J., Loftus, C. T., Carroll, K. N., Bush,
+#' N. R., ... & Sathyanarayana, S. (2024). Subpopulations of children with
+#' multiple chronic health outcomes in relation to chemical exposures in the
+#' ECHO-PATHWAYS consortium. Environment international, 185, 108486.
+#'
+#' Hartigan, J. A. and Wong, M. A. (1979). Algorithm AS 136: A K-means
+#' clustering algorithm. Applied Statistics, 28, 100–108. doi:10.2307/2346830.
+#'
+residkm <- function(data, groupcolumn = "Cohort", krange = 2:10, ksel = T,
+                    altfeatnames = NULL, featgroups = NULL, impncp = 5,
+                    impgrouping = NULL, imptypes = NULL,
+                    method = c("kmeans", "pam", "spectral"), nbcindex = "all",
+                    nbcmethod = "complete", summaryplot = F){
+  coredat <- data[, -which(names(data) == groupcolumn)]
+  colclasses <- sapply(coredat, class)
   if(any(is.na(coredat))){
-    naflag<-T
-    nadata<-data
-    if(is.null(impgrouping)) impgrouping<-rep(1,length=ncol(coredat))
+    naflag <- T
+    nadata <- data
+    if(is.null(impgrouping)) impgrouping <- rep(1, length = ncol(coredat))
     if(is.null(imptypes)){
-      imptypes<-rep("s",ncol(coredat))
-      imptypes[which(colclasses%in%c("character","logical","factor"))]<-"n"
+      imptypes <- rep("s", length(impgrouping))
+      imptypes[which(colclasses %in% c("character", "logical", "factor"))] <- "n"
     }
-    groupnames<-paste0("Group",1:length(impgrouping))
-    coredat<-missMDA::imputeMFA(coredat,group=impgrouping,type=imptypes,
-                                ncp=impncp,name.group=groupnames,graph=F)$completeObs
+    groupnames <- paste0("Group", 1:length(impgrouping))
+    coredat <- missMDA::imputeMFA(coredat, group = impgrouping, type = imptypes,
+                                ncp = impncp, name.group = groupnames,
+                                graph = F)$completeObs
     # https://francoishusson.wordpress.com/2017/08/05/can-we-believe-in-the-imputations/
-    data<-cbind(coredat,data[,groupcolumn])
-    names(data)[ncol(data)]<-groupcolumn
-  } else {naflag<-F}
-  cohresid<-as.data.frame(matrix(0,nrow(coredat),ncol(coredat)))
-  names(cohresid)<-names(coredat)
+    data <- cbind(coredat, data[, groupcolumn])
+    names(data)[ncol(data)] <- groupcolumn
+  } else {naflag <- F}
+  cohresid <- as.data.frame(matrix(0, nrow(coredat), ncol(coredat)))
+  names(cohresid) <- names(coredat)
   for(j in 1:ncol(coredat)){
-    form<-formula(paste0(names(coredat)[j],"~",groupcolumn))
-    if(!class(data[,names(coredat)[j]])%in%c("numeric","integer")){
-      templm<-glm(form,data,family="binomial",na.action=na.exclude)
-      tempresid<-resid(templm,type="response")
+    form <- formula(paste0(names(coredat)[j], "~", groupcolumn))
+    if(!class(data[, names(coredat)[j]]) %in% c("numeric", "integer")){
+      templm <- glm(form, data, family = "binomial", na.action = na.exclude)
+      tempresid <- resid(templm, type = "response")
     } else {
-      templm<-lm(form,data,na.action=na.exclude)
-      tempresid<-resid(templm)
+      templm <- lm(form, data, na.action = na.exclude)
+      tempresid <- resid(templm)
     }
-    cohresid[,names(coredat)[j]]<-tempresid
-  };rm(j,templm,tempresid,form)
+    cohresid[, names(coredat)[j]] <- tempresid
+  };rm(j, templm, tempresid, form)
   if(ksel){
-    cohnbc<-NbClust(scale(cohresid),distance = "euclidean",
-                    min.nc = min(krange),max.nc = max(krange),
-                    method = "complete",index = nbcindex)#$Best.nc[1]
-    if(nbcindex=="all"|length(nbcindex)>1){
-      bestnc<-getmode(cohnbc$Best.nc[1,])
+    cohnbc <- NbClust(scale(cohresid), distance = "euclidean",
+                    min.nc = min(krange), max.nc = max(krange),
+                    method = nbcmethod, index = nbcindex)
+    if(nbcindex == "all"|length(nbcindex) > 1){
+      bestnc <- getmode(cohnbc$Best.nc[1, ])
     } else {
-      bestnc<-cohnbc$Best.nc[1]
+      bestnc <- cohnbc$Best.nc[1]
     }
   } else {
-    cohnbc<-krange[1]
-    bestnc<-krange[1]
+    cohnbc <- krange[1]
+    bestnc <- krange[1]
   }
-  if(length(method)>1) method<-method[1]
-  if(method=="kmeans"){
-    km<-kmeans(scale(cohresid),bestnc,iter.max=100,nstart=1000)
-  } else if(method=="pam"){
-    km<-fpc::pamk(scale(cohresid),krange=bestnc,criterion="ch")
-    km$cluster<-km$pamobject$clustering
-    km$centers<-km$pamobject$medoids
-    rownames(km$centers)<-1:nrow(km$centers)
-  } else if(method=="specc"){
-    km<-fpc::speccCBI(scale(cohresid),bestnc)
-    km$cluster<-km$partition
+  if(length(method) > 1) method <- method[1]
+  if(method == "kmeans"){
+    km <- kmeans(scale(cohresid), bestnc, iter.max = 100, nstart = 1000)
+  } else if(method == "pam"){
+    km <- fpc::pamk(scale(cohresid), krange = bestnc, criterion = "ch")
+    km$cluster <- km$pamobject$clustering
+    km$centers <- km$pamobject$medoids
+    rownames(km$centers) <- 1:nrow(km$centers)
+  } else if(method == "specc"){
+    km <- fpc::speccCBI(scale(cohresid), bestnc)
+    km$cluster <- km$partition
   }
-  
-  reorder_clusters<-function(x){
-    fx<-as.factor(x)
-    summfx<-summary(fx)
-    newlabs<-summfx[order(-summfx)]
-    #levels(fx)<-newlabs#names(newlabs)
-    fx<-factor(fx,levels=names(newlabs))
-    return(as.numeric(fx))
-  }
-  origclustcounts<-summary(as.factor(km$cluster))
-  km$cluster<-reorder_clusters(km$cluster)
-  newclustcounts<-summary(as.factor(km$cluster))
-  km$centers<-km$centers[match(newclustcounts,origclustcounts),]
-  rownames(km$centers)<-1:nrow(km$centers)
-  kmc<-as.data.frame(km$centers)
+
+  km$cluster <- reorder_clusters(km$cluster)
+  newcenters <- getcenters(cohresid, km$cluster, scale = T)
+  centerdists <- eudist(t(rbind(km$centers,newcenters)))
+  centerdists <- centerdists[(nrow(km$centers) + 1):nrow(centerdists),
+                             1:nrow(km$centers)]
+  newclustmapping <- apply(centerdists, 1, which.min)
+  km$centers <- km$centers[newclustmapping, ]
+  rownames(km$centers) <- 1:nrow(km$centers)
+
+  centerplot <- PlotClusterCenters(centers = km$centers, clustvec = km$cluster,
+                                   altfeatnames = altfeatnames,
+                                   featgroups = featgroups)
+
   if(!is.null(altfeatnames)){
-    featnames<-altfeatnames
-  } else {
-    featnames<-names(coredat)
-  }
-  names(kmc)<-featnames
-  kmc$Cluster<-as.factor(paste0("Cluster ",rownames(km$centers)))
-  clusternobs<-summary(as.factor(km$cluster))
-  levels(kmc$Cluster)<-paste0(levels(kmc$Cluster)," (",clusternobs,")")
-  kmc<-reshape2::melt(kmc,id.vars="Cluster")
-  kmc$variable<-factor(kmc$variable,levels=rev(featnames))
-  if(!is.null(feattypes)){
-    ftd<-data.frame(Types=feattypes,Feats=featnames)
-    kmc$Type<-factor(ftd[match(as.character(kmc$variable),ftd$Feats),"Types"],
-                     levels=unique(feattypes))
-    centerplot<-ggplot(kmc,aes(y=variable,x=value))+theme_bw()+
-      geom_bar(aes(fill=value),stat="identity",alpha=0.6)+
-      geom_vline(xintercept=0)+geom_text(aes(label=round(value,2)))+
-      scale_fill_viridis_c()+facet_nested(Cluster+Type~.,scales="free_y",
-                                          space="free_y")+
-      xlab("Center Z-score")+
-      theme(legend.position="none",axis.title.y=element_blank())
-  } else {
-    centerplot<-ggplot(kmc,aes(y=variable,x=value))+theme_bw()+
-      geom_bar(aes(fill=value),stat="identity",alpha=0.6)+
-      geom_vline(xintercept=0)+geom_text(aes(label=round(value,2)))+
-      scale_fill_viridis_c()+facet_grid(Cluster~.)+xlab("Center Z-score")+
-      theme(legend.position="none",axis.title.y=element_blank())
-  }
-  
-  summarybycluster<-function(data,clustvec,contvars,catvars,
-                             contwhitecutoff=0,catwhitecutoff=0,scale=T,
-                             title=NULL,titlesize=12,xlabelsize=12,
-                             yaxistextsize=10,xaxistextsize=10,na.rm=T){
-    data$Cluster<-as.factor(clustvec)
-    countsumm<-summary(data$Cluster)
-    clustcountdf<-data.frame(Cluster=names(countsumm),Count=countsumm)
-    data$Count<-clustcountdf[match(data$Cluster,clustcountdf$Cluster),"Count"]
-    data$Cluster<-as.factor(paste0(as.character(data$Cluster),
-                                   " (n=",data$Count,")"))
-    data$Count<-NULL
-    datacat_long<-reshape2::melt(data[,which(!names(data)%in%contvars)],
-                                 id.vars="Cluster")
-    heatdfcat<-aggregate(
-      value~Cluster+variable,datacat_long,
-      function(x) (length(which(x%in%c("Y",1)))/length(x))*100,na.action=NULL)
-    datacont_orig<-datacont<-data[,c(contvars)]
-    if(any(scale)){
-      if(length(scale)==1){scale<-rep(scale,length(contvars))}
-      for(i in 1:length(contvars)){
-        if(scale[i]){datacont[,contvars[i]]<-
-          as.numeric(scale(datacont[,contvars[i]]))} 
-      }
-    }
-    datacont$Cluster<-datacont_orig$Cluster<-data$Cluster
-    datacont_long<-reshape2::melt(datacont,id.vars="Cluster")
-    heatdfcont<-aggregate(value~Cluster+variable,datacont_long,mean)
-    heatdfcont2<-aggregate(value~Cluster+variable,datacont_long,sd)
-    heatdfcont$SD<-heatdfcont2$value
-    rm(heatdfcont2)
-    datacont_orig_long<-reshape2::melt(datacont_orig,id.vars="Cluster")
-    heatdfcont_orig<-aggregate(value~Cluster+variable,datacont_orig_long,mean)
-    heatdfcont_orig2<-aggregate(value~Cluster+variable,datacont_orig_long,sd)
-    heatdfcont_orig$SD<-heatdfcont_orig2$value
-    rm(heatdfcont_orig2)
-    heatdfcont$CenterLab<-heatdfcont_orig$value
-    heatdfcont$SDLab<-heatdfcont_orig$SD
-    decimalplaces <- function(x,beforedecimal=F) {
-      if(beforedecimal){
-        if (abs(x - round(x)) > .Machine$double.eps^0.5) {
-          nchar(strsplit(sub('0+$', '', as.character(x)), ".", fixed=TRUE)[[1]][[1]])
-        } else {
-          nchar(x)
-        }
-      } else {
-        if (abs(x - round(x)) > .Machine$double.eps^0.5) {
-          nchar(strsplit(sub('0+$', '', as.character(x)), ".", fixed=TRUE)[[1]][[2]])
-        } else {
-          return(0)
-        }
-      }
-    }
-    for(i in 1:nrow(heatdfcont)){
-      dcp_c<-c(decimalplaces(heatdfcont[i,"CenterLab"]),decimalplaces(heatdfcont[i,"CenterLab"],T))
-      dcp_s<-c(decimalplaces(heatdfcont[i,"SDLab"]),decimalplaces(heatdfcont[i,"SDLab"],T))
-      if(dcp_c[2]>2) {heatdfcont[i,"CenterLab"]<-signif(heatdfcont[i,"CenterLab"],3)
-      } else if(dcp_c[1]>0){heatdfcont[i,"CenterLab"]<-round(heatdfcont[i,"CenterLab"],1)} 
-      if(dcp_s[2]>1) {heatdfcont[i,"SDLab"]<-signif(heatdfcont[i,"SDLab"],2)
-      } else if(dcp_s[1]>0){heatdfcont[i,"SDLab"]<-round(heatdfcont[i,"SDLab"],1)}
-    }
-    heatdfcont$TextLabel<-paste0(heatdfcont$CenterLab,
-                                 " (",heatdfcont$SDLab,")")
-    
-    heatdfcat$variable<-factor(heatdfcat$variable,
-                               levels=rev(levels(heatdfcat$variable)))
-    heatdfcont$variable<-factor(heatdfcont$variable,
-                                levels=rev(levels(heatdfcont$variable)))
-    heatdfcont$TextColor<-ifelse(heatdfcont$value>contwhitecutoff,"black","white")
-    heatdfcat$TextColor<-ifelse(heatdfcat$value>catwhitecutoff,"black","white")
-    
-    heatdfcont$StripTitle<-"Mean (SD)"
-    heatdfcat$StripTitle<-"Percent"
-    
-    if(na.rm){
-      heatdfcont<-heatdfcont[heatdfcont$Cluster!="NA",]
-      heatdfcat<-heatdfcat[heatdfcat$Cluster!="NA",]
-    }
-    
-    g1<-ggplot(heatdfcont,aes(y=variable,x=Cluster,fill=value))+
-      facet_grid(StripTitle~.,space="free",scales="free")+
-      geom_tile(alpha=0.6)+
-      geom_text(aes(label=TextLabel,color=TextColor),size=3.5)+
-      scale_fill_viridis_c()+cowplot::theme_cowplot()+
-      scale_color_manual(values=c("black","white"),guide=F)+
-      labs(fill="Z")+
-      theme(legend.position="right",
-            axis.title=element_blank(),
-            axis.text.x=element_blank(),
-            axis.ticks.x=element_blank(),
-            strip.text=element_text(size=12),
-            axis.text.y=element_text(size=yaxistextsize),
-            legend.key.height=unit(length(unique(heatdfcont$variable))/5,'line'),
-            legend.title.align=0.5)
-    if(!is.null(title)){g1<-g1+ggtitle(title)+
-      theme(plot.title=element_text(size=titlesize,hjust=0.5))}
-    
-    g2<-ggplot(heatdfcat,aes(y=variable,x=Cluster,fill=value))+
-      facet_grid(StripTitle~.,space="free",scales="free")+
-      geom_tile(alpha=0.6)+
-      geom_text(aes(label=round(value,1),color=TextColor),size=4)+
-      scale_fill_viridis_c(option="C")+cowplot::theme_cowplot()+
-      scale_color_manual(values=c("black","white"),guide=F)+
-      labs(fill="%")+
-      theme(legend.position="right",
-            axis.title.y=element_blank(),
-            axis.title.x=element_text(size=xlabelsize),
-            strip.text=element_text(size=12),
-            axis.text.x=element_text(size=xaxistextsize),
-            axis.text.y=element_text(size=yaxistextsize),
-            legend.key.height=unit(length(unique(heatdfcat$variable))/5,'line'),
-            legend.title.align=0.5)
-    
-    catlength<-length(unique(heatdfcat$variable))
-    contlength<-length(unique(heatdfcont$variable))
-    catplotht<-(catlength)/(catlength+contlength)
-    contplotht<-contlength/(catlength+contlength)
-    fig<-cowplot::plot_grid(g1,g2,nrow=2,align="v",
-                            rel_heights=c(contplotht,catplotht))
-    return(fig)
-  }
-  contvars<-featnames[which(colclasses%in%c("numeric","integer"))]
+    featnames <- altfeatnames
+  } else {featnames <- names(coredat)}
+  contvars <- featnames[which(colclasses %in% c("numeric", "integer"))]
+  catvars <- featnames[which(!colclasses %in% c("numeric", "integer"))]
   if(exists("nadata")) {
-    meanfigdata<-nadata[,-which(names(nadata)==groupcolumn)]
+    meanfigdata <- nadata[, -which(names(nadata) == groupcolumn)]
   } else {
-    meanfigdata<-data[,-which(names(data)==groupcolumn)]
+    meanfigdata <- data[, -which(names(data) == groupcolumn)]
   }
-  names(meanfigdata)<-featnames
-  meanfig<-summarybycluster(meanfigdata,km$cluster,
-                            contvars,setdiff(featnames,contvars))
-  eudist<-function(x){
-    as.matrix(dist(t(x),diag=T,upper=T))
+  names(meanfigdata) <- featnames
+  if(!is.null(featgroups)){
+    ftd <- data.frame(Types = featgroups, Feats = featnames)
+    contgrp <- ftd[match(contvars, ftd$Feats), "Types"]
+    catgrp <- ftd[match(catvars, ftd$Feats), "Types"]
+    meanfig <- ClusterSummaryPlot(meanfigdata, km$cluster,
+                                contvars, setdiff(featnames, contvars),
+                                contgroups = contgrp, catgroups = catgrp)
+  } else {
+    meanfig <- ClusterSummaryPlot(meanfigdata, km$cluster,
+                                contvars, setdiff(featnames, contvars))
   }
-  
-  allcenters<-km$centers
-  rownames(allcenters)<-paste0("C",1:nrow(km$centers))
-  allcenters<-t(allcenters)
-  eudists<-eudist(allcenters)
-  eudlabs<-apply(eudists,2,function(x) round(x,2))
-  hm1<-gplots::heatmap.2(eudists,scale="none",col=hcl.colors(50),trace="none",
-                         notecex=1.25,cellnote=eudlabs,notecol="black",
-                         tracecol="black")
-  
+
+  allcenters <- km$centers
+  rownames(allcenters) <- paste0("C", 1:nrow(km$centers))
+  allcenters <- t(allcenters)
+  eudists <- eudist(allcenters)
+  eudlabs <- apply(eudists, 2, function(x) round(x, 2))
+  eud_heatmap <- function(...){
+    plot_heatmap <- function() gplots::heatmap.2(...)
+  }
+  eudist_heatmap <- eud_heatmap(eudists, scale = "none", col = hcl.colors(50),
+                                trace = "none", notecex = 1.25,
+                                cellnote = eudlabs, notecol = "black",
+                                tracecol = "black")
+
   if(naflag){
-    return(list(Kmeans=km,KChoice=cohnbc,ResidualData=cohresid,
-                CenterPlot=centerplot,MeanPlot=meanfig,CenterEuDist=hm1,ImpData=data))
+    return(list(Kmeans = km, KChoice = cohnbc, ResidualData = cohresid,
+                CenterPlot = centerplot, SummaryPlot = meanfig,
+                CenterEuDist = eudist_heatmap, ImpData = data))
   } else {
-    return(list(Kmeans=km,KChoice=cohnbc,ResidualData=cohresid,
-                CenterPlot=centerplot,MeanPlot=meanfig,CenterEuDist=hm1))
+    return(list(Kmeans = km, KChoice = cohnbc, ResidualData = cohresid,
+                CenterPlot = centerplot, SummaryPlot = meanfig,
+                CenterEuDist = eudist_heatmap))
   }
 }

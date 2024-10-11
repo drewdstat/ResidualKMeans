@@ -1,0 +1,19 @@
+Package: ResidualKMeans
+Title: K-means Clustering of Mixed Continuous and Categorical Data Adjusting for Clustering by a Factor
+Version: 1.0.1
+Author: Drew Day [aut, cre]
+Maintainer: Drew Day <dday612@gmail.com>
+Authors@R: c(
+    person("Drew", "Day", email = "dday612@gmail.com", role = c("aut", "cre")), 
+    person("Adam", "Szpiro", email = "aszpiro@uw.edu", role = "aut")))
+Description: This package performs residual-adjusted k-means clustering, which performed well under simulations to cluster a relatively low dimensional set of mixed continuous and categorical features by latent clusters while controlling for the effect of another variable that also provided clustering structure, such as cohort in a multi-cohort study.
+License: GPL-3
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports: 
+    FactoMineR, ggplot2, cowplot, fpc, clusterGeneration, NbClust, missMDA, ggh4x, gplots, reshape2
+Suggests: 
+    rmarkdown, knitr, testthat (>= 3.0.0)
+VignetteBuilder: knitr
+Config/testthat/edition: 3

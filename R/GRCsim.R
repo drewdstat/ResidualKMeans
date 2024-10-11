@@ -43,6 +43,12 @@
 #' @param nNoise The number of noise variables (defaults to 0). Noise variables
 #' have no impact on the clustering. The sum of nSignal + nNoise must be equal
 #' to the sum of ncontvars and ncatvars.
+#' @param nOutliers The number of "outliers" (defaults to 0) as defined by
+#' \code{\link[clusterGeneration]{genRandomClust}}, which generates this number
+#' of outliers for each feature by choosing random values from a uniform
+#' distribution bounded by 4 standard deviations below and above the mean of
+#' each feature. These outliers are defined as belonging to a separate "0"
+#' cluster for the "cohorts" (C0) and the "disease states" (D0).
 #' @param nrep The number of clustered datasets to be generated (defaults to 50).
 #' @param DisClustSizes A vector representing how many observations are in each
 #' latent disease state cluster. Must be of the length defined in nDisClust.
@@ -189,20 +195,20 @@
 #'
 GRCsim <- function(nDisClust = 2, nCohortClust = 2, ncontvars = 2, ncatvars = 1,
                    DisSepVal = 0.3, CohortSepVal = 0.15, catq = 0.8,
-                   nSignal = 3, nNoise = 0, nrep = 50,
+                   nSignal = 3, nNoise = 0, nOutliers = 0, nrep = 50,
                    DisClustSizes = c(350, 150), CohortClustSizes = c(300, 200),
                    DisClustseed = 2, CohortClustseed = 3, CDS = F,
                    nContCDSrootvars = 1, nCatCDSrootvars = 1,
                    nContCDSgenvars = 2, nCatCDSgenvars = 2, CDSrho = 0.7,
                    ratiomiss = 0.2, missindex = NULL, misstype = "MCAR",
                    missseed = NULL, comiss = F){
-  if(nDisClust! = length(DisClustSizes)|nCohortClust! = length(CohortClustSizes)){
+  if(nDisClust != length(DisClustSizes)|nCohortClust != length(CohortClustSizes)){
     stop(paste0("There is a mismatch between the numbers of observations in",
                 " each cluster and the number of clusters. Make sure that ",
                 "nDisClust == length(DisClustSizes) and nCohortClust == ",
                 "length(CohortClustSizes)."))
   }
-  if(nNoise + nSignal! = ncontvars + ncatvars){
+  if(nNoise + nSignal != ncontvars + ncatvars){
     stop(paste0("The sum of nSignal and nNoise must equal the sum of ncontvars",
                 " and ncatvars."))
   }
@@ -291,7 +297,7 @@ GRCsim <- function(nDisClust = 2, nCohortClust = 2, ncontvars = 2, ncatvars = 1,
             napca <- PCA(nadriver, scale.unit = T, ncp = 5, graph = F)
             nadriver <- napca$ind$coord[, 1]
             set.seed(missseed)
-            missppts <- sample(which(nadriver> = quantile(
+            missppts <- sample(which(nadriver >= quantile(
               nadriver, probs = (1-newmissratio))),
               size = ratiomiss * nrow(combclusts[[i]]), replace = F)
             combclusts[[i]][missppts, missindex] <- NA
@@ -302,7 +308,7 @@ GRCsim <- function(nDisClust = 2, nCohortClust = 2, ncontvars = 2, ncatvars = 1,
             napca <- PCA(nadriver, scale.unit = T, ncp = 5, graph = F)
             nadriver <- napca$ind$coord[, 1]
             set.seed(missseed)
-            missppts <- sample(which(nadriver> = quantile(
+            missppts <- sample(which(nadriver >= quantile(
               nadriver, probs = (1-newmissratio))),
               size = ratiomiss * nrow(combclusts[[i]]), replace = F)
             combclusts[[i]][missppts, missindex] <- NA
@@ -325,7 +331,7 @@ GRCsim <- function(nDisClust = 2, nCohortClust = 2, ncontvars = 2, ncatvars = 1,
             for(j in missindex){
               missseed <- missseed + j
               set.seed(missseed)
-              missppts <- sample(which(nadriver> = quantile(
+              missppts <- sample(which(nadriver >= quantile(
                 nadriver, probs = (1-newmissratio))),
                 size = ratiomiss * nrow(combclusts[[i]]), replace = F)
               combclusts[[i]][missppts, j] <- NA
@@ -339,7 +345,7 @@ GRCsim <- function(nDisClust = 2, nCohortClust = 2, ncontvars = 2, ncatvars = 1,
             for(j in missindex){
               missseed <- missseed + j
               set.seed(missseed)
-              missppts <- sample(which(nadriver> = quantile(
+              missppts <- sample(which(nadriver >= quantile(
                 nadriver, probs = (1 - newmissratio))),
                 size = ratiomiss * nrow(combclusts[[i]]), replace = F)
               combclusts[[i]][missppts, j] <- NA
@@ -362,8 +368,8 @@ GRCsim <- function(nDisClust = 2, nCohortClust = 2, ncontvars = 2, ncatvars = 1,
           combclusts[[i]][, k] <- as.factor(ifelse(
             combclusts[[i]][, k] > quantile(combclusts[[i]][, k],
                                             probs = catq), 1, 0))
-          levels(combclusts[[i]][, k]) <- paste(names(
-            combclusts[[i]])[k], levels(combclusts[[i]][, k]), sep = "=")
+          # levels(combclusts[[i]][, k]) <- paste(names(
+          #   combclusts[[i]])[k], levels(combclusts[[i]][, k]), sep = "=")
         };rm(k)
       }
 
