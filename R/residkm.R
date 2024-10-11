@@ -15,10 +15,10 @@
 #'
 #' If there are missing data present in the matrix of variables to be clustered,
 #' single-value, multifactor analysis (MFA)-based imputation is performed using
-#' the \code{\link[imputeMFA]{missMDA}} function from the missMDA package. For
+#' the \code{\link[missMDA]{imputeMFA}} function from the missMDA package. For
 #' more information on this imputation approach, see this
-#' \href{https://francoishusson.wordpress.com/2017/08/05/can-we-believe-in-the-imputations/}
-#' {blog post from the package author}. The optimal number of clusters is either
+#' \href{https://francoishusson.wordpress.com/2017/08/05/can-we-believe-in-the-imputations/}{
+#' blog post from the package author}. The optimal number of clusters is either
 #' user-specified or chosen using the consensus of methods implemented by the
 #' \code{\link[NbClust]{NbClust}} function, with user-specified \code{method}
 #' and \code{index} arguments fed into that function.
@@ -55,11 +55,11 @@
 #' This defaults to NULL, meaning that no grouping is applied in those plots.
 #' @param impncp This and the following "imp..." arguments relate to the
 #' MFA-based imputation procedure used if missing values are detected in the
-#' provided data frame. Specifically, the \code{\link[imputeMFA]{missMDA}}
+#' provided data frame. Specifically, the \code{\link[missMDA]{imputeMFA}}
 #' function is used for this imputation, and \code{impncp} refers to the number
 #' of factors (akin to principal components) to use as a lower dimensional
 #' representation of the data from which new values will be imputed. This
-#' is the same as \code{ncp} in the \code{\link[imputeMFA]{missMDA}} functions,
+#' is the same as \code{ncp} in the \code{\link[missMDA]{imputeMFA}} functions,
 #' and it defaults to 5.
 #' @param impgrouping An optional vector of integers describing how many
 #' variables are in each group if one wants to group variables for the MFA
@@ -67,11 +67,11 @@
 #' \code{data} and the middle 3 originate from a common source and are highly
 #' correlated, one could group those 3 features for the imputation method by
 #' setting \code{impgrouping} to \code{c(1, 3, 1)}. This is the same as the
-#' \code{\link[imputeMFA]{missMDA}} argument \code{group}, and it defaults to
+#' \code{\link[missMDA]{imputeMFA}} argument \code{group}, and it defaults to
 #' NULL, meaning that each variable is considered to be distinct and no features
 #' are grouped together.
 #' @param imptypes An optional vector to specify the variable types for each
-#' group of features for the \code{\link[imputeMFA]{missMDA}} imputation
+#' group of features for the \code{\link[missMDA]{imputeMFA}} imputation
 #' function. This must either be equal to the length of the number of clustering
 #' features or, if \code{impgrouping} is specified, equal to the length of that
 #' grouping vector. Available options are \code{"n"} for categorical variables,
@@ -79,7 +79,7 @@
 #' the function prior to MFA, or \code{"s"} for continuous or integer values
 #' that will then be centered and scaled by the function prior to MFA. This is
 #' identical to the \code{types} argument in
-#' \code{\link[imputeMFA]{missMDA}}, and it defaults to NULL, meaning that each
+#' \code{\link[missMDA]{imputeMFA}}, and it defaults to NULL, meaning that each
 #' continuous and integer variable will be set to type \code{"s"} and all
 #' categorical variables will be set to type \code{"n"}.
 #' @param method A character value showing which type of clustering method to
