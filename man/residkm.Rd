@@ -93,9 +93,11 @@ categorical variables will be set to type \code{"n"}.}
 apply to the residuals of each variable regressed on \code{groupcolumn}. This
 defaults to \code{"kmeans"}, which would implement the residual k-means
 method and performed best out of all tested options of clustering algorithms
-applied to the residuals in the Day et al. 2024 paper. However, alternative
+applied to the residuals in the
+\href{https://pubmed.ncbi.nlm.nih.gov/38367551/}{Day et al. 2024 paper}.
+However, alternative
 options are included as a point of reference and for testing the residual
-k-means algorithm in for one's self against alternative methods. The first
+k-means algorithm for one's self against alternative methods. The first
 alternative option is \code{"pam"} for partitioning around medoids (PAM),
 which is implemented using the \code{\link[fpc]{pamk}} function. The second
 is \code{"spectral"} for spectral clustering using the
