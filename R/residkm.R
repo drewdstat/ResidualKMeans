@@ -123,8 +123,13 @@
 #' \code{nbcmethod} is set to \code{"complete"} and \code{"ward.D2"} to check
 #' for consistency of your optimal number of clusters, and I would recommend
 #' against using the \code{"kmeans"} \code{nbcmethod}.
+#' @param summaryplots A logical (boolean) value indicating whether to include
+#' the \code{CenterPlot}, \code{SummaryPlot}, and \code{CenterEuDist} plots
+#' (see the description of the output below for more details). This defaults to
+#' \code{TRUE}.
 #'
-#' @return \code{residkm} returns a list of the following:
+#' @return \code{residkm} returns a list of class \code{"residkm"} that includes
+#' the following:
 #' \item{ResidualData}{The data frame of the residuals for each variable
 #' regressed on \code{groupcolumn}. Note that these residuals are not
 #' centered and scaled, though they were centered and scaled prior to
@@ -133,11 +138,11 @@
 #' \code{"kmeans"}.}
 #' \item{KChoice}{The output of the \code{\link[NbClust]{NbClust}} method.}
 #' \item{CenterPlot}{A plot of the cluster centers on the scale of the z-scores
-#' of the residuals.}
+#' of the residuals. This is only output if \code{summaryplots = TRUE}.}
 #' \item{SummaryPlot}{A plot of the summary statistics of each feature by
-#' cluster.}
+#' cluster. This is only output if \code{summaryplots = TRUE}.}
 #' \item{CenterEuDist}{This is a plot showing the Euclidean distances between
-#' each of the cluster centers.}
+#' each of the cluster centers. This is only output if \code{summaryplots = TRUE}.}
 #' \item{ImpData}{This is the version of the dataset \code{data} but with the
 #' singly imputed values included in cases where missing values are present in
 #' the data frame. This only appears in the output list if missing values were
@@ -183,7 +188,7 @@ residkm <- function(data, groupcolumn = "Cohort", krange = 2:10, ksel = T,
                     altfeatnames = NULL, featgroups = NULL, impncp = 5,
                     impgrouping = NULL, imptypes = NULL,
                     method = c("kmeans", "pam", "spectral"), nbcindex = "all",
-                    nbcmethod = "complete", summaryplot = F){
+                    nbcmethod = "complete", summaryplots = T){
   coredat <- data[, -which(names(data) == groupcolumn)]
   colclasses <- sapply(coredat, class)
   if(any(is.na(coredat))){
@@ -250,53 +255,63 @@ residkm <- function(data, groupcolumn = "Cohort", krange = 2:10, ksel = T,
   km$centers <- km$centers[newclustmapping, ]
   rownames(km$centers) <- 1:nrow(km$centers)
 
-  centerplot <- PlotClusterCenters(centers = km$centers, clustvec = km$cluster,
-                                   altfeatnames = altfeatnames,
-                                   featgroups = featgroups)
+  if(summaryplots){
+    centerplot <- PlotClusterCenters(centers = km$centers, clustvec = km$cluster,
+                                     altfeatnames = altfeatnames,
+                                     featgroups = featgroups)
+    if(!is.null(altfeatnames)){
+      featnames <- altfeatnames
+    } else {featnames <- names(coredat)}
+    contvars <- featnames[which(colclasses %in% c("numeric", "integer"))]
+    catvars <- featnames[which(!colclasses %in% c("numeric", "integer"))]
+    if(exists("nadata")) {
+      meanfigdata <- nadata[, -which(names(nadata) == groupcolumn)]
+    } else {
+      meanfigdata <- data[, -which(names(data) == groupcolumn)]
+    }
+    names(meanfigdata) <- featnames
+    if(!is.null(featgroups)){
+      ftd <- data.frame(Types = featgroups, Feats = featnames)
+      contgrp <- ftd[match(contvars, ftd$Feats), "Types"]
+      catgrp <- ftd[match(catvars, ftd$Feats), "Types"]
+      meanfig <- ClusterSummaryPlot(meanfigdata, km$cluster,
+                                    contvars, setdiff(featnames, contvars),
+                                    contgroups = contgrp, catgroups = catgrp)
+    } else {
+      meanfig <- ClusterSummaryPlot(meanfigdata, km$cluster,
+                                    contvars, setdiff(featnames, contvars))
+    }
 
-  if(!is.null(altfeatnames)){
-    featnames <- altfeatnames
-  } else {featnames <- names(coredat)}
-  contvars <- featnames[which(colclasses %in% c("numeric", "integer"))]
-  catvars <- featnames[which(!colclasses %in% c("numeric", "integer"))]
-  if(exists("nadata")) {
-    meanfigdata <- nadata[, -which(names(nadata) == groupcolumn)]
+    allcenters <- km$centers
+    rownames(allcenters) <- paste0("C", 1:nrow(km$centers))
+    allcenters <- t(allcenters)
+    eudists <- eudist(allcenters)
+    eudlabs <- apply(eudists, 2, function(x) round(x, 2))
+    eud_heatmap <- function(...){
+      plot_heatmap <- function() gplots::heatmap.2(...)
+    }
+    eudist_heatmap <- eud_heatmap(eudists, scale = "none", col = hcl.colors(50),
+                                  trace = "none", notecex = 1.25,
+                                  cellnote = eudlabs, notecol = "black",
+                                  tracecol = "black")
+    if(naflag){
+      outlist <- list(Kmeans = km, KChoice = cohnbc, ResidualData = cohresid,
+                      CenterPlot = centerplot, SummaryPlot = meanfig,
+                      CenterEuDist = eudist_heatmap, ImpData = data)
+    } else {
+      outlist <- list(Kmeans = km, KChoice = cohnbc, ResidualData = cohresid,
+                      CenterPlot = centerplot, SummaryPlot = meanfig,
+                      CenterEuDist = eudist_heatmap)
+    }
   } else {
-    meanfigdata <- data[, -which(names(data) == groupcolumn)]
-  }
-  names(meanfigdata) <- featnames
-  if(!is.null(featgroups)){
-    ftd <- data.frame(Types = featgroups, Feats = featnames)
-    contgrp <- ftd[match(contvars, ftd$Feats), "Types"]
-    catgrp <- ftd[match(catvars, ftd$Feats), "Types"]
-    meanfig <- ClusterSummaryPlot(meanfigdata, km$cluster,
-                                contvars, setdiff(featnames, contvars),
-                                contgroups = contgrp, catgroups = catgrp)
-  } else {
-    meanfig <- ClusterSummaryPlot(meanfigdata, km$cluster,
-                                contvars, setdiff(featnames, contvars))
+    if(naflag){
+      outlist <- list(Kmeans = km, KChoice = cohnbc, ResidualData = cohresid,
+                      ImpData = data)
+    } else {
+      outlist <- list(Kmeans = km, KChoice = cohnbc, ResidualData = cohresid)
+    }
   }
 
-  allcenters <- km$centers
-  rownames(allcenters) <- paste0("C", 1:nrow(km$centers))
-  allcenters <- t(allcenters)
-  eudists <- eudist(allcenters)
-  eudlabs <- apply(eudists, 2, function(x) round(x, 2))
-  eud_heatmap <- function(...){
-    plot_heatmap <- function() gplots::heatmap.2(...)
-  }
-  eudist_heatmap <- eud_heatmap(eudists, scale = "none", col = hcl.colors(50),
-                                trace = "none", notecex = 1.25,
-                                cellnote = eudlabs, notecol = "black",
-                                tracecol = "black")
-
-  if(naflag){
-    return(list(Kmeans = km, KChoice = cohnbc, ResidualData = cohresid,
-                CenterPlot = centerplot, SummaryPlot = meanfig,
-                CenterEuDist = eudist_heatmap, ImpData = data))
-  } else {
-    return(list(Kmeans = km, KChoice = cohnbc, ResidualData = cohresid,
-                CenterPlot = centerplot, SummaryPlot = meanfig,
-                CenterEuDist = eudist_heatmap))
-  }
+  class(outlist) <- "residkm"
+  return(outlist)
 }

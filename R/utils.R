@@ -55,6 +55,92 @@ eudist <- function(x){
   as.matrix(dist(t(x), diag = T, upper = T))
 }
 
+countperc <- function(x, roundplace = 2, na.rm = T, al5 = F){
+  if(na.rm) summ <- summary(x[which(!is.na(x))]) else summ <- summary(x)
+  al5bool <- al5 & any(summ < 5 & summ > 0)
+  perc <- prop.table(summ)
+  if(al5bool){
+    truncindex <- which(summ < 5 & summ > 0)
+    perc[truncindex] <- 5/sum(summ)
+    summ[truncindex] <- 5
+  }
+  summ <- paste0(summ, " (", round(perc * 100, roundplace), "%)")
+  if(al5bool) summ[truncindex] <- paste0("<", gsub(" \\(", " \\(<",
+                                                   summ[truncindex]))
+  names(summ) <- names(perc)
+  return(summ)
+}
+
+matchclustercenter <- function(newcenters, origcenters){
+  allcents <- rbind(origcenters, newcenters)
+  rownames(allcents)<-
+    c(paste0("O", 1:nrow(origcenters)), paste0("N", 1:nrow(newcenters)))
+  allcents <- t(allcents)
+  alleu <- eudist(allcents)
+  alleu <- alleu[grep("N", rownames(alleu)), grep("O", colnames(alleu))]
+  apply(alleu, 2, which.min)
+}
+
+
+
+contcatagggroupwide <- function(aggcontvars, aggcatvars, groupnames = NULL,
+                                groupvar = "Cluster", Dat, rpl = 2,
+                                altcontnames = NULL, altcatnames = NULL,
+                                atleastfive = F){
+  longcontaggfunc <- function(var, Data, groupvar, rplace = rpl){
+    t(aggregate(formula(paste0(var, "~", groupvar)), Data,
+                function(x) meansd(x, meanroundplace = rplace,
+                                   sdroundplace = rplace),
+                na.action = NULL)[-1, ])
+  }
+  longcataggfunc <- function(var, Data, groupvar, rplace = rpl){
+    t(aggregate(formula(paste0(var, "~", groupvar)), Data,
+                function(x) countperc(x[which(!is.na(x))], roundplace = rplace,
+                                      al5 = atleastfive),
+                na.action = NULL))[-1, ]
+  }
+  collen <- length(unique(Dat[, groupvar])) + 2
+  if(!is.null(aggcountvars)){
+    outagg <- matrix(NA, length(aggcontvars), collen)
+    if(is.null(altcontnames)) contvarn <- aggcontvars else
+      contvarn <- altcontnames
+    outagg[, 1] <- contvarn
+    outagg[, 2] <- ""
+    for(i in 1:length(aggcontvars)){
+      outagg[i, 3:collen] <- longcontaggfunc(aggcontvars[i], Dat, groupvar, rpl)
+    }; rm(i)
+  } else {
+    outagg <- matrix(NA, 0, collen)
+  }
+  if(is.null(aggcatvars)) return(outagg)
+
+  faccheck <- sapply(Dat[, aggcatvars], is.factor)
+  if(!all(faccheck)){
+    if(length(which(!faccheck)) == 1){
+      Dat[, aggcatvars[which(!faccheck)]] <- as.factor(
+        Dat[, aggcatvars[which(!faccheck)]])
+    } else {
+      Dat[, aggcatvars[which(!faccheck)]] <- lapply(
+        Dat[, aggcatvars[which(!faccheck)]], as.factor)
+    }
+  }
+  catlen <- sapply(Dat[, aggcatvars], function(x) length(
+    unique(x[which(!is.na(x))])))
+  if(is.null(altcatnames)) varn <- aggcatvars else varn <- altcatnames
+  for(i in 1:length(aggcatvars)){
+    tempagg <- matrix(NA, catlen[i], collen)
+    tempagg[, 1] <- varn[i]
+    tempagg[, 2] <- levels(Dat[, aggcatvars[i]])
+    tempagg[, 3:collen] <- longcataggfunc(aggcatvars[i], Dat, groupvar, rpl)
+    outagg <- rbind(outagg, tempagg)
+  };rm(tempagg, i)
+  outagg <- as.data.frame(outagg)
+  if(!is.factor(Dat[, groupvar])) Dat[, groupvar] <- as.factor(Dat[, groupvar])
+  if(is.null(groupnames)) groupnames <- levels(Dat[, groupvar])
+  names(outagg) <- c("Variable", "Category", groupnames)
+  return(outagg)
+}
+
 NbClust_km <- function (data = NULL, diss = NULL, distance = "euclidean",
                         min.nc = 2, max.nc = 15, method = "kmeans",
                         index = "all", alphaBeale = 0.1){
