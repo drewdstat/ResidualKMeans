@@ -17,7 +17,7 @@ residkm(
   method = c("kmeans", "pam", "spectral"),
   nbcindex = "all",
   nbcmethod = "complete",
-  summaryplot = F
+  summaryplots = T
 )
 }
 \arguments{
@@ -132,9 +132,15 @@ clearly illustrated in this excellent
 \code{nbcmethod} is set to \code{"complete"} and \code{"ward.D2"} to check
 for consistency of your optimal number of clusters, and I would recommend
 against using the \code{"kmeans"} \code{nbcmethod}.}
+
+\item{summaryplots}{A logical (boolean) value indicating whether to include
+the \code{CenterPlot}, \code{SummaryPlot}, and \code{CenterEuDist} plots
+(see the description of the output below for more details). This defaults to
+\code{TRUE}.}
 }
 \value{
-\code{residkm} returns a list of the following:
+\code{residkm} returns a list of class \code{"residkm"} that includes
+the following:
 \item{ResidualData}{The data frame of the residuals for each variable
 regressed on \code{groupcolumn}. Note that these residuals are not
 centered and scaled, though they were centered and scaled prior to
@@ -143,11 +149,11 @@ clustering.}
 \code{"kmeans"}.}
 \item{KChoice}{The output of the \code{\link[NbClust]{NbClust}} method.}
 \item{CenterPlot}{A plot of the cluster centers on the scale of the z-scores
-of the residuals.}
+of the residuals. This is only output if \code{summaryplots = TRUE}.}
 \item{SummaryPlot}{A plot of the summary statistics of each feature by
-cluster.}
+cluster. This is only output if \code{summaryplots = TRUE}.}
 \item{CenterEuDist}{This is a plot showing the Euclidean distances between
-each of the cluster centers.}
+each of the cluster centers. This is only output if \code{summaryplots = TRUE}.}
 \item{ImpData}{This is the version of the dataset \code{data} but with the
 singly imputed values included in cases where missing values are present in
 the data frame. This only appears in the output list if missing values were
