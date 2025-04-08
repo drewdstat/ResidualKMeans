@@ -120,7 +120,7 @@ ClusterSummaryPlot <- function(data, clustvec, contvars, catvars, contgroups=NUL
                              yaxistextsize = 10, xaxistextsize = 10, na.rm = T){
   posresponses <- c("Y", 1, "y", "yes", "Yes", "YES")
   checkpositivesymbols <- function(x) any(
-    x %in% posresponses)
+    grepl(paste(posresponses, collapse="|"), x))
   checkpositives <- sapply(data[, catvars], checkpositivesymbols)
   if(any(!checkpositives)){
     stop(paste0("It is unclear how positive categorical responses are coded \n",
@@ -145,11 +145,11 @@ ClusterSummaryPlot <- function(data, clustvec, contvars, catvars, contgroups=NUL
   datacat_long <- reshape2::melt(data[, which(
     names(data) %in% c("Cluster", catvars))], id.vars = "Cluster")
   if(na.rm){
-    catpercfunc <- function(x) (length(which(x %in% posresponses))/length(
-      x[which(!is.na(x))]))*100
+    catpercfunc <- function(x) (length(which(grepl(
+      paste(posresponses, collapse = "|"), x)))/length(x[which(!is.na(x))]))*100
   } else {
-    catpercfunc <- function(x) (length(which(x %in% posresponses))/length(
-      x))*100
+    catpercfunc <- function(x) (length(which(grepl(paste(
+      posresponses, collapse = "|"), x)))/length(x))*100
   }
   heatdfcat <- aggregate(
     value ~ Cluster + variable, datacat_long,

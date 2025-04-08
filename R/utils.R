@@ -1,22 +1,37 @@
+#Get mode of a vector
 getmode <- function(v){
   unique(v)[which.max(tabulate(match(v, unique(v))))]
 }
 
+#Get lengths of roughly equal splits of integer sequence
+seq_split_lengths <- function(x, num_parts){
+  bins <- cut(
+    x, breaks = seq(min(x, na.rm = TRUE), max(x, na.rm = TRUE),
+                    length.out = num_parts + 1), include.lowest = TRUE,
+    labels = FALSE)
+  as.vector(table(bins))
+}
+
+#Create a vector with a certain Pearson correlation coef. with the input vector
 complement <- function(y, rho, x) {
   if (missing(x)) x <- rnorm(length(y))
   rho * sd(x) * y + x * sd(y) * sqrt(1 - rho^2)
 }
 
+#Given a single predictor, intercept, and slope, predict a binary outcome
 binpred<-function(x, b0, b1, seed = NULL){
   if(!is.null(seed)) set.seed(seed)
   missprobpred <- 1/(1 + exp(-1 * (b0 + x * b1)))
   rbinom(length(missprobpred), 1, missprobpred)
 }
 
-getcenters<-function(Data, clusters, scale = T){
+# Get the centers (colMeans) for Data based on a vector of cluster identities
+getcenters<-function(Data, clusters, scale = TRUE, sortclusts = TRUE){
   coln <- colnames(Data)
   if(scale) Data <- scale(Data)
   centermat <- matrix(NA, length(unique(clusters)), ncol(Data))
+  clusternames <- unique(clusters)
+  if(sortclusts) clusternames <- clusternames[sort(clusternames)]
   for(i in 1:length(unique(clusters))){
     centermat[i, ] <- colMeans(Data[which(clusters == i), ], na.rm = T)
   }
@@ -25,6 +40,7 @@ getcenters<-function(Data, clusters, scale = T){
   return(centermat)
 }
 
+#find how many digits are after (default) or before the decimal for a float
 decimalplaces  <-  function(x, beforedecimal = F) {
   if(beforedecimal){
     if (abs(x - round(x))  >  .Machine$double.eps^0.5) {
@@ -43,6 +59,7 @@ decimalplaces  <-  function(x, beforedecimal = F) {
   }
 }
 
+#Reorder cluster names from largest -> smallest
 reorder_clusters <- function(x){
   fx <- as.factor(x)
   summfx <- summary(fx)
@@ -51,10 +68,12 @@ reorder_clusters <- function(x){
   return(as.numeric(fx))
 }
 
+#get a matrix of Euclidean distances
 eudist <- function(x){
   as.matrix(dist(t(x), diag = T, upper = T))
 }
 
+# return counts & %s from a factor with the option to use '<5' for small values
 countperc <- function(x, roundplace = 2, na.rm = T, al5 = F){
   if(na.rm) summ <- summary(x[which(!is.na(x))]) else summ <- summary(x)
   al5bool <- al5 & any(summ < 5 & summ > 0)
@@ -71,6 +90,7 @@ countperc <- function(x, roundplace = 2, na.rm = T, al5 = F){
   return(summ)
 }
 
+#Compare two sets of cluster centers to find the closest matches
 matchclustercenter <- function(newcenters, origcenters){
   allcents <- rbind(origcenters, newcenters)
   rownames(allcents)<-
@@ -81,8 +101,7 @@ matchclustercenter <- function(newcenters, origcenters){
   apply(alleu, 2, which.min)
 }
 
-
-
+#Summary statistics for numeric & factor variables
 contcatagggroupwide <- function(aggcontvars, aggcatvars, groupnames = NULL,
                                 groupvar = "Cluster", Dat, rpl = 2,
                                 altcontnames = NULL, altcatnames = NULL,
@@ -141,6 +160,7 @@ contcatagggroupwide <- function(aggcontvars, aggcatvars, groupnames = NULL,
   return(outagg)
 }
 
+#Modifying NbClust to have enough k-means iterations
 NbClust_km <- function (data = NULL, diss = NULL, distance = "euclidean",
                         min.nc = 2, max.nc = 15, method = "kmeans",
                         index = "all", alphaBeale = 0.1){
