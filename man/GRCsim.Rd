@@ -20,7 +20,7 @@ GRCsim(
   CohortClustSizes = c(300, 200),
   DisClustseed = 2,
   CohortClustseed = 3,
-  CDS = F,
+  CDS = FALSE,
   nContCDSrootvars = 1,
   nCatCDSrootvars = 1,
   nContCDSgenvars = 2,
@@ -30,7 +30,7 @@ GRCsim(
   missindex = NULL,
   misstype = "MCAR",
   missseed = NULL,
-  comiss = F,
+  comiss = FALSE,
   combo_method = c("avg", "add")
 )
 }

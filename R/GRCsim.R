@@ -216,11 +216,12 @@ GRCsim <- function(nDisClust = 2, nCohortClust = 2, ncontvars = 2, ncatvars = 1,
                    DisSepVal = 0.3, CohortSepVal = 0.15, catq = 0.8,
                    nSignal = NULL, nNoise = 0, nOutliers = 0, nrep = 50,
                    DisClustSizes = c(350, 150), CohortClustSizes = c(300, 200),
-                   DisClustseed = 2, CohortClustseed = 3, CDS = F,
+                   DisClustseed = 2, CohortClustseed = 3, CDS = FALSE,
                    nContCDSrootvars = 1, nCatCDSrootvars = 1,
                    nContCDSgenvars = 2, nCatCDSgenvars = 2, CDSrho = 0.7,
                    ratiomiss = 0.2, missindex = NULL, misstype = "MCAR",
-                   missseed = NULL, comiss = F, combo_method = c("avg", "add")){
+                   missseed = NULL, comiss = FALSE,
+                   combo_method = c("avg", "add")){
   if(length(DisClustSizes) == 1) DisClustSizes <-
       seq_split_lengths(1:DisClustSizes, nDisClust)
   if(length(CohortClustSizes) == 1) CohortClustSizes <-
@@ -243,6 +244,7 @@ GRCsim <- function(nDisClust = 2, nCohortClust = 2, ncontvars = 2, ncatvars = 1,
     stop(paste0("The sum of nSignal and nNoise must equal the sum of ncontvars",
                 " and ncatvars."))
   }
+  if(length(combo_method) > 1) combo_method <- combo_method[1]
   cl <- match.call()
 
   set.seed(DisClustseed)
@@ -250,15 +252,16 @@ GRCsim <- function(nDisClust = 2, nCohortClust = 2, ncontvars = 2, ncatvars = 1,
                                numNonNoisy = nSignal, numNoisy = nNoise,
                                fileName = "grc.clust", numReplicate = nrep,
                                numOutlier = nOutliers, clustszind = 3,
-                               clustSizes = DisClustSizes, outputDatFlag = F,
-                               outputLogFlag = F, outputInfo = F)
+                               clustSizes = DisClustSizes, outputDatFlag = FALSE,
+                               outputLogFlag = FALSE, outputInfo = FALSE)
   set.seed(CohortClustseed)
   grc.cohorts <- genRandomClust(nCohortClust, sepVal = CohortSepVal,
                                 numNonNoisy = nSignal, numNoisy = nNoise,
                                 fileName = "grc.cohort", numReplicate = nrep,
                                 numOutlier = nOutliers, clustszind = 3,
-                                clustSizes = CohortClustSizes, outputDatFlag = F,
-                                outputLogFlag = F, outputInfo = F)
+                                clustSizes = CohortClustSizes,
+                                outputDatFlag = FALSE,
+                                outputLogFlag = FALSE, outputInfo = FALSE)
   combclusts <- list()
   if(CDS){
     for(i in 1:length(grc.clusts$datList)){
@@ -345,7 +348,6 @@ GRCsim <- function(nDisClust = 2, nCohortClust = 2, ncontvars = 2, ncatvars = 1,
       names(combclusts[[i]]) <- paste0("x", 1:ncol(combclusts[[i]]))
       if(!is.null(missindex)){
         nonadf <- combclusts[[i]]
-        library(FactoMineR)
         if(is.null(missseed)) missseed <- sample(1:1E6, 1)
         missseed <- missseed + i
         if(comiss){
@@ -405,7 +407,7 @@ GRCsim <- function(nDisClust = 2, nCohortClust = 2, ncontvars = 2, ncatvars = 1,
             newmissratio <- ratiomiss * 1.5
             nadriver <- combclusts[[i]][, grep(
               "x", names(combclusts[[i]]))][, missindex]
-            napca <- PCA(nadriver, graph = F)
+            napca <- PCA(nadriver, graph = FALSE)
             nadriver <- napca$ind$coord[, 1]
             for(j in missindex){
               missseed <- missseed + j

@@ -7,13 +7,13 @@
 logo_residkm(
   data = NULL,
   groupvar = "Cohort",
-  includefull = T,
+  includefull = TRUE,
   krange = 2:10,
-  jaccardboot = T,
+  jaccardboot = TRUE,
   jacb = 1000,
   exclgroups = NULL,
   exclgroupnames = NULL,
-  returnplots = T,
+  returnplots = TRUE,
   groupname = NULL,
   origcenters = NULL,
   altfeatnames = NULL,
@@ -167,7 +167,7 @@ that the consistency and stability of the clustering results can be evaluated.
 hubhighsep <- GRCsim(nDisClust = 4, nCohortClust = 4, ncontvars = 8,
 ncatvars = 7, DisSepVal = 0.6, CohortSepVal = 0.2, catq = 0.8, nSignal = 15,
 nNoise = 0, nOutliers = 0, nrep = 1, DisClustSizes = c(600, 200, 100, 100),
-CohortClustSizes = c(400, 200, 300, 100), CDS = F,
+CohortClustSizes = c(400, 200, 300, 100), CDS = FALSE,
 DisClustseed = 200, CohortClustseed = 300, CDSrho = 0.7)$DataList
 
 logo_ex1 <- logo_residkm(hubhighsep[[1]][, c(paste0("x", 1:15), "Cohort")],

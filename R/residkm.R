@@ -148,7 +148,10 @@
 #' the data frame. This only appears in the output list if missing values were
 #' detected in the input data frame \code{data}.}
 #'
-#' @import ggplot2 NbClust missMDA fpc ggh4x gplots
+#' @import ggplot2 NbClust missMDA fpc ggh4x
+#' @importFrom gplots heatmap.2
+#' @importFrom grDevices hcl.colors
+#' @importFrom graphics par
 #' @export residkm
 #'
 #' @examples

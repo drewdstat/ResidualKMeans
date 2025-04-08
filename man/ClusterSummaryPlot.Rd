@@ -13,7 +13,7 @@ ClusterSummaryPlot(
   catgroups = NULL,
   contwhitecutoff = NULL,
   catwhitecutoff = NULL,
-  scale = T,
+  scale_cont = TRUE,
   contpalette = "viridis",
   catpalette = "plasma",
   palettealpha = 0.7,
@@ -58,15 +58,22 @@ must also be provided. This defaults to \code{NULL}, meaning that no
 grouping of features is applied.}
 
 \item{contwhitecutoff}{An optional value on either the original scale of the
-\code{contvars} or on a z-score scale (if \code{scale = TRUE}) above which
-the font of the values displayed on the heatmap will be black and below which
-or equal to which the font will be white. This is useful for seeing values
-against a dark background. This defaults to \code{NULL}, meaning that all
-text font will be black.}
+\code{contvars} (if \code{scale_cont = FALSE}) or on a z-score scale (if
+\code{scale_cont = TRUE}) above which the font of the values displayed on the
+heatmap will be black and below which or equal to which the font will be
+white. This is useful for seeing values against a dark background. This
+defaults to \code{NULL}, meaning that all text font will be black.}
 
 \item{catwhitecutoff}{A similar optional value to \code{contwhitecutoff}, but
 on the scale of 0 - 100 for the percentages of the binary categorical
 variables.}
+
+\item{scale_cont}{An option for whether the argument \code{contwhitecutoff}
+will refer to a value on the original scales of all continuous variables, or
+just on the z-score scale of all those variables. It is advised to set this
+to \code{TRUE} so that the black/white text color cutoff is on a similar
+scale across all continuous variables no matter their value ranges. This
+defaults to \code{TRUE}.}
 
 \item{contpalette}{The name of a viridis palette to apply to the continuous
 variable summary heatmap (see \code{\link[ggplot2]{scale_colour_viridis_d}}
@@ -131,7 +138,7 @@ on top and the categorical variables below.
 hubhighsep <- GRCsim(nDisClust = 4, nCohortClust = 4, ncontvars = 8,
 ncatvars = 7, DisSepVal = 0.6, CohortSepVal = 0.2, catq = 0.8, nSignal = 15,
 nNoise = 0, nOutliers = 0, nrep = 1, DisClustSizes = c(600, 200, 100, 100),
-CohortClustSizes = c(400, 200, 300, 100), CDS = F, nContCDSrootvars = 2,
+CohortClustSizes = c(400, 200, 300, 100), CDS = FALSE, nContCDSrootvars = 2,
 nCatCDSrootvars = 2, nContCDSgenvars = 3, nCatCDSgenvars = 3,
 DisClustseed = 200, CohortClustseed = 300, CDSrho = 0.7)$DataList
 

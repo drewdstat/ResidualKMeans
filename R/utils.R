@@ -194,16 +194,15 @@ NbClust_km <- function (data = NULL, diss = NULL, distance = "euclidean",
       stop("\n", "method = kmeans, data matrix is needed")
     }
     else {
-      if ((indice == 1) || (indice == 2) || (indice ==
-                                             3) || (indice == 4) || (indice == 5) || (indice ==
-                                                                                      6) || (indice == 7) || (indice == 8) || (indice ==
-                                                                                                                               9) || (indice == 10) || (indice == 12) || (indice ==
-                                                                                                                                                                          14) || (indice == 15) || (indice == 16) || (indice ==
-                                                                                                                                                                                                                      17) || (indice == 18) || (indice == 19) || (indice ==
-                                                                                                                                                                                                                                                                  20) || (indice == 23) || (indice == 24) || (indice ==
-                                                                                                                                                                                                                                                                                                              25) || (indice == 27) || (indice == 28) || (indice ==
-                                                                                                                                                                                                                                                                                                                                                          29) || (indice == 30) || (indice == 31) || (indice ==
-                                                                                                                                                                                                                                                                                                                                                                                                      32))
+      if ((indice == 1) || (indice == 2) || (indice == 3) || (indice == 4) || (
+        indice == 5) || (indice == 6) || (indice == 7) || (indice == 8) || (
+          indice == 9) || (indice == 10) || (indice == 12) || (
+            indice == 14) || (indice == 15) || (indice == 16) || (
+              indice == 17) || (indice == 18) || (indice == 19) || (
+                indice == 20) || (indice == 23) || (indice == 24) || (
+                  indice == 25) || (indice == 27) || (indice == 28) || (
+                    indice == 29) || (indice == 30) || (indice == 31) || (
+                      indice == 32))
         stop("\n", "Data matrix is needed. Only frey, mcclain, cindex, sihouette and dunn can be computed.",
              "\n")
       if (is.null(diss))
