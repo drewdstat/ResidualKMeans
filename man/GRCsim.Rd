@@ -12,7 +12,7 @@ GRCsim(
   DisSepVal = 0.3,
   CohortSepVal = 0.15,
   catq = 0.8,
-  nSignal = 3,
+  nSignal = NULL,
   nNoise = 0,
   nOutliers = 0,
   nrep = 50,
@@ -30,7 +30,8 @@ GRCsim(
   missindex = NULL,
   misstype = "MCAR",
   missseed = NULL,
-  comiss = F
+  comiss = F,
+  combo_method = c("avg", "add")
 )
 }
 \arguments{
@@ -63,8 +64,9 @@ categorical variables are dichotomized. Defaults to 0.8, which means that
 variables selected to be dichotomized will be 1 above the 80th percentile and
 zero below, meaning a rate of 20\% '1' responses.}
 
-\item{nSignal}{The number of signal variables (defaults to 3). In this case,
-signal variables indicate variables that impact the clustering.}
+\item{nSignal}{The number of signal variables. Signal variables indicate
+variables that impact the clustering. This defaults to \code{NULL}, meaning
+that all continuous and categorical variables are signal variables.}
 
 \item{nNoise}{The number of noise variables (defaults to 0). Noise variables
 have no impact on the clustering. The sum of nSignal + nNoise must be equal
@@ -81,11 +83,17 @@ cluster for the "cohorts" (C0) and the "disease states" (D0).}
 
 \item{DisClustSizes}{A vector representing how many observations are in each
 latent disease state cluster. Must be of the length defined in nDisClust.
-Defaults to c(350, 150).}
+Alternatively, one could provide a single integer representing the overall
+sample size (e.g., \code{DisClustSizes = 1000}), in which case that value
+will be roughly evenly split into \code{nDisClust} parts using the \code{cut}
+function. This defaults to \code{c(350, 150)}.}
 
 \item{CohortClustSizes}{A vector representing how many observations are in
-each cohort cluster. Must be of the length defined in nCohortClust. Defaults
-to c(300, 200).}
+each cohort cluster. Must be of the length defined in nCohortClust.
+Alternatively, one could provide a single integer representing the overall
+sample size (e.g., \code{CohortClustSizes = 1000}), in which case that value
+will be roughly evenly split into \code{nCohortClust} parts using the
+\code{cut} function. This defaults to \code{c(300, 200)}.}
 
 \item{DisClustseed}{The random seed for the datasets clustered by latent
 disease state. Defaults to 2.}
@@ -173,6 +181,19 @@ and then for column 3. Setting \code{comiss = TRUE} simulates participants
 missing multiple tests within a given visit, whereas \code{comiss = FALSE}
 simulates a more random missingness process independent of participant. This
 defaults to \code{FALSE}.}
+
+\item{combo_method}{This is a character value of \code{"avg"} or \code{"add"}
+that describes how the data frame created based on latent disease state
+clusters and the data frame created based on cohort clusters are combined
+prior to dichotomizing variables. If \code{"add"}, the two data sets will be
+added together, while \code{"avg"} indicates that the datasets will be
+averaged together. Since the only difference is that the latter option
+\code{"avg"} also divides values by 2 after adding them, the scaled values
+of the resulting data frame will be equivalent no matter which method you
+choose. This also means that the results of the \code{residkm} function will
+be the same no matter this method. Still, it can be useful to choose "avg"
+for example when visualizing the variables on the original scale. This
+method defaults to \code{"avg"}.}
 }
 \value{
 \code{GRCsim} returns a list of the following:

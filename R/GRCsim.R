@@ -212,7 +212,7 @@
 #' Qiu, W., & Joe, H. (2006). Separation index and partial membership for
 #' clustering. Computational statistics & data analysis, 50(3), 585-603.
 #'
-GRCsim_alt <- function(nDisClust = 2, nCohortClust = 2, ncontvars = 2, ncatvars = 1,
+GRCsim <- function(nDisClust = 2, nCohortClust = 2, ncontvars = 2, ncatvars = 1,
                    DisSepVal = 0.3, CohortSepVal = 0.15, catq = 0.8,
                    nSignal = NULL, nNoise = 0, nOutliers = 0, nrep = 50,
                    DisClustSizes = c(350, 150), CohortClustSizes = c(300, 200),

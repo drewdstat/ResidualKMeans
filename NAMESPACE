@@ -3,6 +3,7 @@
 export(ClusterSummaryPlot)
 export(GRCsim)
 export(PlotClusterCenters)
+export(logo_residkm)
 export(residkm)
 import(FactoMineR)
 import(NbClust)
