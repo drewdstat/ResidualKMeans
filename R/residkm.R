@@ -123,6 +123,18 @@
 #' \code{nbcmethod} is set to \code{"complete"} and \code{"ward.D2"} to check
 #' for consistency of your optimal number of clusters, and I would recommend
 #' against using the \code{"kmeans"} \code{nbcmethod}.
+#' @param glmresidtype This character argument chooses which type of residuals
+#' for the logistic regressions regressing the categorical
+#' features on the grouping variable \code{groupcolumn}. Any categorical
+#' features with >2 categories will be encoded as one hot-encoded dummy
+#' variables, each of which will be regressed on \code{groupcolumn} with a
+#' logistic regression, after which the residuals from each of these
+#' logistic regressions will be features in the clustering step. The type of
+#' residuals to get from these logistic regressions is defined in
+#' \code{glmresidtype}, and the options are
+#' \code{c("response", "deviance", "pearson", "partial", "working")}. See
+#' \code{\link[stats]{residuals.glm}} for more details. This defaults to
+#' \code{"response"}.
 #' @param summaryplots A logical (boolean) value indicating whether to include
 #' the \code{CenterPlot}, \code{SummaryPlot}, and \code{CenterEuDist} plots
 #' (see the description of the output below for more details). This defaults to
@@ -187,15 +199,16 @@
 #' Hartigan, J. A. and Wong, M. A. (1979). Algorithm AS 136: A K-means
 #' clustering algorithm. Applied Statistics, 28, 100–108. doi:10.2307/2346830.
 #'
-residkm <- function(data, groupcolumn = "Cohort", krange = 2:10, ksel = T,
+residkm <- function(data, groupcolumn = "Cohort", krange = 2:10, ksel = TRUE,
                     altfeatnames = NULL, featgroups = NULL, impncp = 5,
                     impgrouping = NULL, imptypes = NULL,
-                    method = c("kmeans", "pam", "spectral"), nbcindex = "all",
-                    nbcmethod = "complete", summaryplots = T){
+                    method = c("kmeans", "pam", "spectral"),
+                    nbcindex = "all", nbcmethod = "complete",
+                    glmresidtype = "response", summaryplots = TRUE){
   coredat <- data[, -which(names(data) == groupcolumn)]
   colclasses <- sapply(coredat, class)
   if(any(is.na(coredat))){
-    naflag <- T
+    naflag <- TRUE
     nadata <- data
     if(is.null(impgrouping)) impgrouping <- rep(1, length = ncol(coredat))
     if(is.null(imptypes)){
@@ -206,7 +219,6 @@ residkm <- function(data, groupcolumn = "Cohort", krange = 2:10, ksel = T,
     coredat <- missMDA::imputeMFA(coredat, group = impgrouping, type = imptypes,
                                 ncp = impncp, name.group = groupnames,
                                 graph = F)$completeObs
-    # https://francoishusson.wordpress.com/2017/08/05/can-we-believe-in-the-imputations/
     data <- cbind(coredat, data[, groupcolumn])
     names(data)[ncol(data)] <- groupcolumn
   } else {naflag <- F}
@@ -216,7 +228,7 @@ residkm <- function(data, groupcolumn = "Cohort", krange = 2:10, ksel = T,
     form <- formula(paste0(names(coredat)[j], "~", groupcolumn))
     if(!class(data[, names(coredat)[j]]) %in% c("numeric", "integer")){
       templm <- glm(form, data, family = "binomial", na.action = na.exclude)
-      tempresid <- resid(templm, type = "response")
+      tempresid <- resid(templm, type = glmresidtype)
     } else {
       templm <- lm(form, data, na.action = na.exclude)
       tempresid <- resid(templm)

@@ -8,7 +8,7 @@ residkm(
   data,
   groupcolumn = "Cohort",
   krange = 2:10,
-  ksel = T,
+  ksel = TRUE,
   altfeatnames = NULL,
   featgroups = NULL,
   impncp = 5,
@@ -17,7 +17,8 @@ residkm(
   method = c("kmeans", "pam", "spectral"),
   nbcindex = "all",
   nbcmethod = "complete",
-  summaryplots = T
+  glmresidtype = "response",
+  summaryplots = TRUE
 )
 }
 \arguments{
@@ -132,6 +133,19 @@ clearly illustrated in this excellent
 \code{nbcmethod} is set to \code{"complete"} and \code{"ward.D2"} to check
 for consistency of your optimal number of clusters, and I would recommend
 against using the \code{"kmeans"} \code{nbcmethod}.}
+
+\item{glmresidtype}{This character argument chooses which type of residuals
+for the logistic regressions regressing the categorical
+features on the grouping variable \code{groupcolumn}. Any categorical
+features with >2 categories will be encoded as one hot-encoded dummy
+variables, each of which will be regressed on \code{groupcolumn} with a
+logistic regression, after which the residuals from each of these
+logistic regressions will be features in the clustering step. The type of
+residuals to get from these logistic regressions is defined in
+\code{glmresidtype}, and the options are
+\code{c("response", "deviance", "pearson", "partial", "working")}. See
+\code{\link[stats]{residuals.glm}} for more details. This defaults to
+\code{"response"}.}
 
 \item{summaryplots}{A logical (boolean) value indicating whether to include
 the \code{CenterPlot}, \code{SummaryPlot}, and \code{CenterEuDist} plots
